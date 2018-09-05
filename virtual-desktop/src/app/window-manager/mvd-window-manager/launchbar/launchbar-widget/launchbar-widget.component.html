@@ -13,9 +13,9 @@
 <div class="launchbar-clock">
   <div class="launchbar-seperator left"></div>
   <span>
-    <span>{{date | date:'h:mm a'}}</span>
+    <span>{{date | date:'shortTime'}}</span>
     <br>
-    <span>{{date | date:'MM.dd.yyyy'}}</span>
+    <span>{{date | date:'shortDate'}}</span>
   </span>
   <div #usericon class="launchbar-user" (click)="togglePopup()"></div>
 </div>

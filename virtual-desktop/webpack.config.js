@@ -11,6 +11,7 @@
 */
 
 const path = require('path');
+var CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   "devtool": "source-map",
@@ -114,6 +115,20 @@ module.exports = {
       }
       callback();
     }
+  ],
+  'plugins': [
+    new CopyWebpackPlugin([
+      {
+        from: path.resolve(__dirname, './node_modules/@angular/common/locales/*.js'),
+        to: './locales/[name].js',
+        toType: 'template'
+      },
+      {
+        from: path.resolve(__dirname, './node_modules/requirejs/require.js'),
+        to: './require.js',
+        toType: 'file'
+      }
+    ])
   ]
 };
 

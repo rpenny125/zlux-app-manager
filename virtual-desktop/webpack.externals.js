@@ -15,6 +15,7 @@ var path = require('path');
 //const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 var config = {
+  "mode": "development",
   "entry":  {
     "main": "./src/externals-main.ts",
     "externals": "./src/externals.ts"

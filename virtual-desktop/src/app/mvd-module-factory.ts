@@ -25,14 +25,23 @@ import { AuthenticationModule } from './authentication-manager/authentication-ma
 import { SharedModule } from './shared/shared.module';
 import {BrowserPreferencesService} from './shared/browser-preferences.service';
 
-declare var System: any ; // = (window as any).System;
+// declare var System: any ; // = (window as any).System;
+
 
 interface I18nInfo {
   language?: string;
   locale?: string;
 }
 
+// declare var useBackupLocale: boolean;
+
 export class LocaleService {
+  useBackupLocale: boolean;
+
+  setUseBackupLocale(arg: boolean): void {
+    this.useBackupLocale = arg;
+  }
+
   getCookies(): any {
     const cookieStrings: string[] = document.cookie.split(';');
     const cookies: any = {};
@@ -65,34 +74,19 @@ export class LocaleService {
   }
 
   getLocale(): string {
-    const i18nInfo: I18nInfo = this.getI18nInfo();
-    const configuredLanguage = i18nInfo.language;
-
-    if (configuredLanguage) {
-      return configuredLanguage;
+    if ((window as any).RocketMVD.useBackupLocale) {
+      return 'en';
     } else {
-      return navigator.language.split('-')[0];
+      const i18nInfo: I18nInfo = this.getI18nInfo();
+      const configuredLanguage = i18nInfo.language;
+
+      if (configuredLanguage) {
+        return configuredLanguage;
+      } else {
+        return navigator.language.split('-')[0];
+      }
     }
   }
-
-  // getLocale(): string {
-  //   if (typeof window === 'undefined' || typeof window.navigator === 'undefined') {
-  //     return '';
-  //   }
-
-  //   let browserLang = 'en-US'; // = window.navigator['languages'] ? window.navigator['languages'][0] : null;
-  //   //browserLang = browserLang || window.navigator.language || window.navigator['browserLanguage'] || window.navigator['userLanguage'];
-
-  //   if (browserLang.indexOf('-') !== -1) {
-  //     browserLang = browserLang.split('-')[0];
-  //   }
-
-  //   if (browserLang.indexOf('_') !== -1) {
-  //     browserLang = browserLang.split('_')[0];
-  //   }
-
-  //   return 'en';
-  // }
 }
 
 export function localeIdFactory(localeService: LocaleService) {
@@ -102,51 +96,35 @@ export function localeIdFactory(localeService: LocaleService) {
 export function localeInitializer(localeId: string) {
   return (): Promise<any> => {
     return new Promise((resolve, reject) => {
+      const baseURI: string = (window as any).RocketMVD.uriBroker.desktopRootUri();
+      const paths: any = {};
 
-// require gives error
-// mvd-module-factory.ts:61 Uncaught TypeError: Cannot read property 'default' of undefined
-// at mvd-module-factory.ts:61
-// at Object.execCb (require.js:1696)
-// at Module.check (require.js:883)
-      // (window as any).require( /* webpackIgnore: true */ [`/ZLUX/plugins/com.rs.mvd.ng2desktop/web/@angular/common/locales/${localeId}.js`],
-      //                           (localeModule: any) => {
-      //   registerLocaleData(localeModule.default);
-      //   resolve();
+      // NOTE: static loading using "import" bloated the desktop.js from
+      // ~800Kb to 2.2Mb. Using lazy loading with "import" resulted in
+      // 1047 .js files and 1047.js.map files in the web folder.
+      // "require" seemed cleaner in the end.
+      //
+      // We're not emulating the whole path in our deployment directory,
+      // but we're showing the original paths so it's clear from the this code
+      // where the locale files originally come from.
+      // They are copied into the web/locales folder during build of the plugin.
 
-// System.import with ignore gives error:
-// externals.js:360 ERROR Error: Uncaught (in promise): Error: Cannot find module "vm".
-// Instantiating https://wal-l-rp01:8544/ZLUX/plugins/com.rs.mvd.ng2desktop/web/@angular/common/locales/en.js
-// Loading /ZLUX/plugins/com.rs.mvd.ng2desktop/web/@angular/common/locales/en.js
-// Error: Cannot find module "vm".
-//   at De.n [as _nodeRequire] (dist sync:2)
-//   at te (system.js:4)
-//   at system.js:4
-    //  const System = (window as any).System;
-    //   System.import(/* webpackIgnore: true */
-    //             `/ZLUX/plugins/com.rs.mvd.ng2desktop/web/@angular/common/locales/${localeId}.js`).then((localeModule: any) => {
-    //     registerLocaleData(localeModule.default);
-    //     resolve();
-    //   })
+      paths[`@angular/common/locales/${localeId}`] = `${baseURI}locales/${localeId}`;
+      (window as any).require.config({
+        'paths': paths
+      });
+      (window as any).require([`@angular/common/locales/${localeId}`],
+        (res: any) => {
+          registerLocaleData(res.default, localeId);
+          resolve();
+        },
+        (err: any) => {
+          (window as any).RocketMVD.useBackupLocale = true;
+          reject(err);
+        }
+      );
 
-// This way works, though it would be nice to be able to hide the language files in a subdirectory,
-// and to also give them better names. Also, this doesn't get called when I change the language
-
-                    /*   webpackMode: "lazy"
-                       webpackInclude: /en.*\|fr.*\|ru.*\|foo/ */
-
-System.import(/* webpackInclude: /.*desktop.*\.js/ */
-                `@angular/common/locales/${localeId}.js`).then((localeModule: any) => {
-        registerLocaleData(localeModule.default);
-        resolve();
-      })
-
-    // import ignores the webpackIgnore and embeds all the locale info
-    // import(/* webpackIgnore: true */
-    //           `@angular/common/locales/${localeId}.js`).then((localeModule: any) => {
-    //   registerLocaleData(localeModule.default);
-    //   resolve();
-    // })
-  });
+    });
   };
 }
 
